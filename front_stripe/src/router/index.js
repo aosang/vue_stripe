@@ -4,6 +4,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 const Home = () => import('../Home.vue')
 const Success = () => import('../Success.vue')
 const Cancel = () => import('../Cancel.vue')
+const Subscription = () => import('../Subscription.vue')
 
 const routes = [
   {
@@ -13,6 +14,10 @@ const routes = [
   {
     path: '/home',
     component: Home
+  },
+  {
+    path: '/subscription',
+    component: Subscription
   },
   {
     path: '/success',

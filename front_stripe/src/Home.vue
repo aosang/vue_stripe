@@ -12,13 +12,13 @@
     </div>
 
     <!-- 一次性支付 - 支持支付宝 -->
-    <div class="payment-option">
+    <!-- <div class="payment-option">
       <h3>🇨🇳 一次性购买</h3>
       <p>支持信用卡、支付宝</p>
       <button @click="handleOneTimePayment" class="payment-button">
         购买 - 支付宝/信用卡
       </button>
-    </div>
+    </div> -->
   </div>
 </template>
 
