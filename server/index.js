@@ -140,12 +140,10 @@ app.post('/create-payment-session', async (req, res) => {
   
   try {
     const frontendUrl = process.env.FRONTEND_URL.replace(/\/$/, '')
-    
     const session = await stripe.checkout.sessions.create({
       // 一次性支付支持多种方式
       payment_method_types: ['card', 'alipay'],
-      line_items: [
-        {
+      line_items: [{
           price_data: {
             currency: 'cny',
             product_data: {
@@ -155,8 +153,7 @@ app.post('/create-payment-session', async (req, res) => {
             unit_amount: amount || 9900, // 默认 99 元
           },
           quantity: 1,
-        }
-      ],
+        }],
       mode: 'payment', // 一次性支付模式
       // 添加 session_id 到回调 URL
       success_url: `${frontendUrl}/success?session_id={CHECKOUT_SESSION_ID}`,
