@@ -14,7 +14,7 @@ app.use(cors())
 // ⚠️ Webhook 路由必须在 express.json() 之前，因为需要原始请求体来验证签名
 app.post('/webhook', express.raw({type: 'application/json'}), async (req, res) => {
   const sig = req.headers['stripe-signature']
-  const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET
+  const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET // webhook密钥
 
   let event
 
@@ -26,87 +26,50 @@ app.post('/webhook', express.raw({type: 'application/json'}), async (req, res) =
     return res.status(400).send(`Webhook Error: ${err.message}`)
   }
 
-  // 处理不同的事件类型
-  // console.log('🔄 收到 Webhook 事件:', event.type)
-
   try {
     switch (event.type) {
       case 'checkout.session.completed':
         const session = event.data.object
-        console.log('💳 支付成功！Session ID:', session.id)
+        console.log('💳 收到支付完成事件！')
+        console.log('完整的 session 对象:', JSON.stringify(session, null, 2))
+        console.log('--- 关键信息 ---')
+        console.log('Session ID:', session.id)
         console.log('客户邮箱:', session.customer_email)
-        
-        // 获取完整的客户信息
-        if (session.customer) {
-          const customer = await stripe.customers.retrieve(session.customer)
-          console.log('客户信息:', {
-            id: customer.id,
-            email: customer.email,
-            name: customer.name
-          })
-        }
-        // TODO: 在这里处理支付成功后的业务逻辑（如发送邮件、更新数据库等）
+        console.log('支付状态:', session.payment_status)
+        console.log('支付金额:', session.amount_total / 100, session.currency.toUpperCase())
+        console.log('支付模式:', session.mode)
         break
-
-      case 'customer.subscription.created':
-        const subscription = event.data.object
-        console.log('🎉 订阅创建成功！Subscription ID:', subscription.id)
-        
-        // 获取客户信息
-        if (subscription.customer) {
-          const customer = await stripe.customers.retrieve(subscription.customer)
-          console.log('订阅客户:', {
-            id: customer.id,
-            email: customer.email,
-            name: customer.name
-          })
-        }
-        // TODO: 处理订阅创建逻辑
-        break
-
-      case 'invoice.payment_failed':
-        const failedInvoice = event.data.object
-        console.log('⚠️ 支付失败！Invoice ID:', failedInvoice.id)
-        
-        // 获取客户信息以便通知
-        if (failedInvoice.customer) {
-          const customer = await stripe.customers.retrieve(failedInvoice.customer)
-          console.log('支付失败的客户:', customer.email)
-          // TODO: 发送支付失败通知邮件
-        }
-        break    
       }
   } catch (error) {
     console.error('处理 Webhook 事件时出错:', error.message)
-    // 即使处理失败，也返回 200，避免 Stripe 重复发送
   }
 
-  // 返回 200 响应告诉 Stripe 已收到事件
+  // 返回 200 响应告诉 Stripe 已收到事件（必须有！）
   res.json({received: true})
 })
 
 app.use(express.json())
 
 //创建订阅
-app.post('/create-subscription', async (req, res) => {
-  const { paymentMethodId, customerId, priceId } = req.body
+// app.post('/create-subscription', async (req, res) => {
+//   const { paymentMethodId, customerId, priceId } = req.body
 
-  try {
-    //创建订阅
-    const subscription = await stripe.subscriptions.create({
-      customer: customerId,
-      items: [{ price: priceId }],
-      default_payment_method: paymentMethodId,
-      expand: ['latest_invoice.payment_intent'],
-    })
+//   try {
+//     //创建订阅
+//     const subscription = await stripe.subscriptions.create({
+//       customer: customerId,
+//       items: [{ price: priceId }],
+//       default_payment_method: paymentMethodId,
+//       expand: ['latest_invoice.payment_intent'],
+//     })
 
-    res.json(subscription)
+//     res.json(subscription)
 
-  }catch(error) {
-    console.error('Error creating subscription:', error);
-    res.status(500).send('Error creating subscription');
-  }
-})
+//   }catch(error) {
+//     console.error('Error creating subscription:', error);
+//     res.status(500).send('Error creating subscription');
+//   }
+// })
 
 // 创建checkout session - 订阅模式（信用卡）
 app.post('/create-checkout-session', async (req, res) => {
@@ -127,9 +90,12 @@ app.post('/create-checkout-session', async (req, res) => {
     })
 
     // 返回 session.url 用于直接跳转
-    res.json({ id: session.id, url: session.url })
+    res.json({ 
+      id: session.id, 
+      url: session.url
+    })
   }catch(error) {
-    console.error('Error creating checkout session:', error);
+    console.error('Error creating checkout session:', error)
     res.status(500).send('Error creating checkout session');
   }
 })
@@ -158,6 +124,7 @@ app.post('/create-payment-session', async (req, res) => {
       // 添加 session_id 到回调 URL
       success_url: `${frontendUrl}/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${frontendUrl}/cancel`,
+      billing_address_collection: 'auto', // 自动收集账单地址
     })
 
     res.json({ id: session.id, url: session.url })
@@ -186,10 +153,10 @@ app.get('/get-session-info', async (req, res) => {
       const subscription = await stripe.subscriptions.retrieve(subscriptionId)
 
       // 打印完整的订阅对象，查看所有字段
-      console.log('完整的订阅对象:', JSON.stringify(subscription))
+      // console.log('完整的订阅对象:', JSON.stringify(subscription))
 
-      console.log('current_period_end:', dayjs(subscription.items.data[0].current_period_end * 1000).format('YYYY-MM-DD HH:mm:ss'))
-      console.log('current_period_start:', dayjs(subscription.items.data[0].current_period_start * 1000).format('YYYY-MM-DD HH:mm:ss'))
+      // console.log('current_period_end:', dayjs(subscription.items.data[0].current_period_end * 1000).format('YYYY-MM-DD HH:mm:ss'))
+      // console.log('current_period_start:', dayjs(subscription.items.data[0].current_period_start * 1000).format('YYYY-MM-DD HH:mm:ss'))
     }
 
     res.json(sessionInfo)
