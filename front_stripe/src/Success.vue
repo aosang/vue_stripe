@@ -18,7 +18,7 @@
       <p class="thank-you">感谢您的订阅！</p>
 
       <!-- 订阅周期信息 -->
-      <div class="info-card">
+      <!-- <div class="info-card">
         <h2>📅 订阅周期</h2>
         <div class="info-row">
           <span class="label">当前周期开始：</span>
@@ -28,7 +28,7 @@
           <span class="label">当前周期结束：</span>
           <span class="value">{{ sessionInfo.currentPeriodEnd || '加载中...' }}</span>
         </div>
-      </div>
+      </div> -->
 
       <div class="actions">
         <button @click="goHome" class="btn-primary">返回首页</button>
